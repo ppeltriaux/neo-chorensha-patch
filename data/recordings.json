@@ -1,0 +1,16 @@
+{
+ "mame": "0.289",
+ "raw": {
+  "effects.log": "3eadeeb0621227903e8885a2d7fe0c5313bc5888",
+  "effects.raw.wav": "e65d353cee046868da45ec6bc492c90f6c65c8a7",
+  "tunes.log": "99af37aae4959e370722942d6a5a3f28965b2412",
+  "tunes.raw.wav": "dfa306d76235a463c08730ad94da07cd36a64f65"
+ },
+ "files": {
+  "tune_11.wav": "c58b15849d58f5e3d0fbb3288f5e56b363b7e173",
+  "tune_12.wav": "76d070965524ec313b8b423fb8fa4d0de1bf75f5",
+  "tune_21.wav": "dd2bc62c5cb1a4164e732f0c168de8a7827d34d5",
+  "effects.wav": "ea78e6d9d521fdab607b462160379db1eaa14036",
+  "meta.json": "2c57b70b4cb325cbcdb01b5ebc238fbd4f0df12c"
+ }
+}

@@ -1,0 +1,8 @@
+build/
+.venv/
+__pycache__/
+neo-chorensha/
+*.zip
+*.dim
+*.dat
+*.neo
