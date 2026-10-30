@@ -1,5 +1,5 @@
 ; ==============================================================================
-; CHOURENSHA SOUND DRIVER (z80asm, the M1 ROM). Adapted from neo-r-type's
+; NEO-CHORENSHA SOUND DRIVER (z80asm, the M1 ROM). Adapted from neo-r-type's
 ; src/z80/sample_driver.asm. Plays the original's recordings, stored by tools/mksound.py in the
 ; V-ROM (build/snd/vrom.bin) and described by build/snd/sound.inc (tables, command bytes):
 ;   music:   ADPCM-B. A tune's intro and loop are contiguous; it starts at the intro with END =

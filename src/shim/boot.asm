@@ -1,5 +1,5 @@
 ; ==============================================================================
-; CHOURENSHA SHIM: BIOS ENTRY POINTS, FAULT CATCHER; THE SERVICES THE ORIGINAL'S CODE CALLS
+; NEO-CHORENSHA SHIM: BIOS ENTRY POINTS, FAULT CATCHER; THE SERVICES THE ORIGINAL'S CODE CALLS
 ; ==============================================================================
     include "neogeo.inc"
     include "shim.inc"              ; the shim's state in the port reserve

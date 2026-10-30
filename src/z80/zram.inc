@@ -1,5 +1,5 @@
 ; ==============================================================================
-; CHOURENSHA SOUND DRIVER: Z80 RAM (z80asm). Hand-written; src/z80/sound.asm includes it and
+; NEO-CHORENSHA SOUND DRIVER: Z80 RAM (z80asm). Hand-written; src/z80/sound.asm includes it and
 ; tests/neo/sound_driver.lua reads the driver's state by these names (name: equ $addr).
 ; RAM is $F800-$FFFF; init clears ZRAM_START..+ZRAM_CLEAR_LEN.
 ; ==============================================================================

@@ -67,7 +67,7 @@ Security_Code:                      ; $186
 ; the operator's, in backup RAM; set in the BIOS's soft-DIP menu).
 SOFT_DIP_AUTOFIRE EQU BIOS_GAME_DIP+6 ; option 1: auto-fire's power-on default (0 OFF, 1 ON)
 Soft_DIPs:
-    dc.b    "CHOURENSHA      "
+    dc.b    "NEO-CHORENSHA   "
     dc.w    $FFFF, $FFFF            ; no time settings
     dc.b    $FF, $FF                ; no count settings
     dc.b    $02                     ; option 1: AUTO FIRE, 2 choices, default 0 (OFF)

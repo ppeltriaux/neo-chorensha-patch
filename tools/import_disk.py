@@ -1,4 +1,4 @@
-"""Import the user's Chourensha 68K disk image into build/orig (never committed).
+"""Import the user's Chorensha disk image into build/orig (never committed).
 
   .venv/bin/python -I tools/import_disk.py --disk PATH --out build/orig
 PATH is a zip holding one .dim, or the .dim itself (--zip: the same option, the Makefile's name).

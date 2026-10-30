@@ -1,4 +1,4 @@
-"""X68000 graphics formats of Chourensha 68K (docs/notes/graphics-recon.md §1-2).
+"""X68000 graphics formats of Chorensha (docs/notes/graphics-recon.md §1-2).
 
 - decode_pcg(data): XSP/PCG 16x16 patterns, 128 B each: four 8x8 quadrants in the order TL, BL,
   TR, BR; 4 bytes per quadrant row, 4bpp packed, the left pixel in the high nibble.

@@ -1,4 +1,4 @@
-# Neo-Chorensha 2026-10-31 (53a0c87)
+# Neo-Chorensha 2026-10-31 (bf52bbe)
 
 Neo-Chorensha is Chorensha v0.10, the 1995 X68000 shooter by Famibe No Yosshin, on the Neo Geo:
 the original's own program runs on the Neo Geo's 68000, with its graphics, music and sound, two
@@ -11,7 +11,7 @@ the original. It holds none of the game (see "What is in the patch").
 
 ## What you need
 
-- **Your own copy of the game:** the Chourensha 68K v0.10 disk image, the X68000 `.dim` (SHA1
+- **Your own copy of the game:** the Chorensha v0.10 disk image, the X68000 `.dim` (SHA1
   `9eae93138254a277f87039ade791f35301dced93`), as it is or in a zip, whatever its name.
 - **The X68000 system ROMs:** `iplrom.dat` (SHA1 `0ed038ed2133b9f78c6e37256807424e0d927560`, the
   IPL ROM MAME 0.289's `x68000` boots) and `cgrom.dat` (786,432 bytes), in a folder or a zip.

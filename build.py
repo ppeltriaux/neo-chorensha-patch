@@ -3,7 +3,7 @@
 
   python3 build.py --disk DISK --x68k-roms ROMS [--mame MAME] [-o OUT]
 
-DISK   the Chourensha 68K v0.10 disk image: a zip holding the .dim, or the .dim
+DISK   the Chorensha v0.10 disk image: a zip holding the .dim, or the .dim
        (SHA1 of the .dim 9eae93138254a277f87039ade791f35301dced93)
 ROMS   a folder or zip holding the X68000's iplrom.dat (MAME 0.289's x68000 ipl10, found by its
        SHA1 whatever its name) and cgrom.dat (786,432 bytes); nothing else is read
@@ -167,7 +167,7 @@ def _check_disk(disk):
         return ["disk image %s: %s" % (disk, e)]
     got = hashlib.sha1(dim).hexdigest()
     if got != import_disk.DIM_SHA1:
-        return ["disk image %s: its .dim has SHA1 %s; Chourensha 68K v0.10's is %s"
+        return ["disk image %s: its .dim has SHA1 %s; Chorensha v0.10's is %s"
                 % (disk, got, import_disk.DIM_SHA1)]
     return []
 
@@ -407,7 +407,7 @@ def run_steps(cmds):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="build.py", description=__doc__.splitlines()[0])
-    ap.add_argument("--disk", required=True, help="Chourensha 68K v0.10's disk image: a zip holding the .dim, or the .dim")
+    ap.add_argument("--disk", required=True, help="Chorensha v0.10's disk image: a zip holding the .dim, or the .dim")
     ap.add_argument("--x68k-roms", required=True, help="a folder or zip holding iplrom.dat and cgrom.dat")
     ap.add_argument("--mame", help="MAME 0.289 (default: $MAME, else mame on PATH)")
     ap.add_argument("-o", "--out", default="neo-chorensha", help="the folder written (default: %(default)s)")
