@@ -1,4 +1,4 @@
-# Neo-Chorensha 2026-10-31 (bf52bbe)
+# Neo-Chorensha 2026-10-31 (10a7bc6)
 
 Neo-Chorensha is Chorensha v0.10, the 1995 X68000 shooter by Famibe No Yosshin, on the Neo Geo:
 the original's own program runs on the Neo Geo's 68000, with its graphics, music and sound, two

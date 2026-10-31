@@ -383,8 +383,9 @@ Coop_Ship:
 ; its score (as $4414 adds P1's at the game over: no print, P1's score is printed at the game
 ; over or by a buy-in's Coop_Join, P2's by Task 7's HUD); from then on Coop_End zeroes it at
 ; every step's end (its shots still in flight score nothing). The other player in: the game
-; over flag back to 0, the game goes on; none: 1, the original's game over ($4414). d0-d1/a0
-; used.
+; over flag back to 0, the game goes on; none: 1, the original's game over ($4414), and P2's
+; score printed again when its corner shows it (a two-player game, not the prompt's: P2 out last,
+; or in the step P1 went out last), its last steps' score_add in it. d0-d1/a0-a1 used.
 ; ------------------------------------------------------------------------------
 Coop_Out:
     move.b  d0, d1
@@ -411,6 +412,13 @@ Coop_Out:
     moveq   #1, d1
 .flag:
     move.w  d1, GV_GAMEOVER
+    beq.s   .out                    ; (a player in: the game goes on)
+    tst.b   SHIM_COOP_2P
+    beq.s   .out                    ; (one player: P2's corner holds nothing)
+    btst    #COOP_PR_P2, SHIM_COOP_PROMPT
+    bne.s   .out                    ; (P2's corner the prompt's: Coop_Over reprints it)
+    bra     Coop_Score2
+.out:
     rts
 
 ; ------------------------------------------------------------------------------
@@ -1520,6 +1528,9 @@ Coop_P2Key:
     beq.s   .out                    ; the BIOS passes it
     tst.b   BIOS_CREDITS+1
     bne.s   .out                    ; P2's own credit: the BIOS passes it (and takes that one)
+    tst.b   BIOS_CREDITS
+    beq.s   .out                    ; no credit: no press kept (a coin landing before its take would
+                                    ; be spent on it), as the BIOS calls for no START with none in
     cmpi.w  #USER_REQ_TITLE, SHIM_BIOS_MODE
     bne.s   .out
     tst.w   SHIM_START_REQ
