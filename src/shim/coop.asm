@@ -125,7 +125,7 @@ COOP_BLK_BURST  EQU $221A2-$22196   ; the burst counter, then $221A4 (the fire p
 COOP_P2_DX      EQU $800            ; P2's entry and respawn x: 32 px right of P1's ($6CC4's $2200)
 COOP_HUD8_DX    EQU 18              ; P2's HUD (Task 7's places): Text8 on field rows 1-2, x + 18
 COOP_HUD16_Y    EQU 15              ; Text16's bombs' row (16-px units: cells 30-31) ...
-COOP_HUD16_DX   EQU 8               ; ... x + 8 (cells 16-31)
+COOP_HUD16_DX   EQU 8               ; ... cells 16-31 (mirrored: Coop_Text16)
 COOP_LOOP       EQU GAME_ROM+$40C6  ; the play loop's step ($4414's beq.w: the game over flag 0)
 COOP_PASS_GO    EQU 0               ; Coop_PassOne's frame: the game over flag as the pass began,
 COOP_PASS_BOMB  EQU 2               ; the bomb timer as it began,
@@ -1216,8 +1216,10 @@ Coop_Exchange:
 ; ------------------------------------------------------------------------------
 ; Coop_Text8 / Coop_Text16 (text.asm Shim_Text8 / Shim_Text16 while P2's context is in): the cell
 ; (d0.w x, d1.w y) = d2.b, P2's HUD at its own place: field rows 1-2 (the label, the score, the
-; lives) x + 18, the bombs' rows (Text16's row 15: cells 30-31) x + 16 (8 glyphs): fixed places
-; of their own (text.asm TEXT_PLACE, TEXT_P2_HUD 1: Task 7; with 0, on the field's fix map, they
+; lives) x + 18, the bombs' rows (Text16's row 15: cells 30-31) mirrored into cells 16-31 (glyph i
+; at 16-px column 15 - i, its halves kept in order: cell x -> 31 - (x ^ 1); P2's bombs from the
+; right edge, the last one spent its leftmost, P1's mirror image: the user's choice, 2026-11-01;
+; the original draws i 0-7 only, $7818/$784E/$7882): fixed places of their own (text.asm TEXT_PLACE, TEXT_P2_HUD 1: Task 7; with 0, on the field's fix map, they
 ; would scroll with the view, so none was written). Other cells as P1's. Keeps every register.
 ; ------------------------------------------------------------------------------
 Coop_Text8:
@@ -1242,7 +1244,9 @@ Coop_Text16:                        ; (the four cells' bsr Text_Put, each)
     bhi.s   .put
     if TEXT_P2_HUD
     move.w  d0, -(sp)
-    addi.w  #2*COOP_HUD16_DX, d0
+    eori.w  #1, d0                  ; 31 - (x ^ 1): the glyph's column mirrored, its halves not
+    neg.w   d0
+    addi.w  #4*COOP_HUD16_DX-1, d0
     jsr     Text_Put
     move.w  (sp)+, d0
     endif
