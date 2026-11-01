@@ -222,7 +222,12 @@ KEEP_AT_EXIT    EQU GAME_ROM+$3376  ; KAKUSI's EXIT clear
 Keep_Restore:
     bsr.s   Keep_Valid              ; a0 = SHIM_KEEP
     suba.l  a1, a1                  ; (no screen change; the condition codes kept)
-    bne     Keep_Save               ; power-on: the snapshot's values stay; the block made of them
+    bne.s   .power
+    bra.s   .valid
+.power:
+    clr.l   KEEP_WAVES_BEST(a0)     ; power-on: no best WAVES score yet (outside the sum)
+    bra     Keep_Save               ; the snapshot's values stay; the block made of them
+.valid:
     move.w  KEEP_XSP(a0), GV_XSP_MODE
     move.w  KEEP_XSP(a0), SHIM_XSP_MODE ; the sprite drawing's, as xsp_mode2 sets it (2 always:
                                         ; CONFIG has no XSP MODE item since 2026-10-28)
@@ -366,7 +371,7 @@ Keep_Save:
     cmpa.l  #KEEP_AT_TITLE, a1
     bne.s   Keep_Seal
     tst.w   d4
-    bne.s   Keep_Seal               ; CONTINUE (1) writes no stage
+    bne.s   Keep_Seal               ; WAVES (1), CONTINUE (2): no stage written (main)
     sf      KEEP_KSTAGE(a0)         ; START: main's next writes ($3F42, $3F4A)
     move.w  #1, KEEP_STAGE(a0)
     clr.w   KEEP_ACCHOH(a0)

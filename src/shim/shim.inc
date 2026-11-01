@@ -226,7 +226,9 @@ KEEP_AUTOFIRE     EQU 19         ; byte: AUTO FIRE, 0 OFF / 1 ON (Task 5: the bl
                                  ; iocs.asm reads it; power-on: the soft DIP's default)
 KEEP_KENTRY       EQU 20         ; word: the stage when KAKUSI last opened
 KEEP_SUM          EQU 22         ; word: the sum of the words KEEP_XSP .. KEEP_KENTRY
-KEEP_SIZE         EQU 32         ; (24-31 spare)
+KEEP_WAVES_BEST   EQU 24         ; long: the best WAVES score since power-on (the WAVES plan Task 5:
+                                 ; waves.asm Waves_End; not in the sum: an invalid block clears it)
+KEEP_SIZE         EQU 32         ; (28-31 spare)
 SHIM_KEEP_END     EQU SHIM_KEEP+KEEP_SIZE
 KEEP_MAGIC_VALUE  EQU $4B454550  ; "KEEP"
 
@@ -545,6 +547,47 @@ SHIM_COOP_P2KEY   EQU SHIM_COOP_CREDITS+1  ; byte: P2's START as the VBlank read
                                      ; COOP_KEY_UP up last frame (0 after a resume), COOP_KEY_SEEN
                                      ; a press the BIOS dropped, the US BIOS fallback's (Coop_P2Key;
                                      ; Title_Hook and Coop_Take take it, masked)
+; --- WAVES, the endless wave mode (the WAVES plan; title.asm, waves.asm): RES_FREE8's start, WAVES_SIZE
+; bytes; cleared at every resume (in SHIM_HIGH_LO .. SHIM_HIGH_HI: a resume is never inside a run)
+SHIM_WAVES        EQU SHIM_COOP_P2KEY+1
+SHIM_WAVES_ON     EQU SHIM_WAVES     ; byte: a WAVES run is on: set by the title's WAVES choice
+                                     ; (Title_Hook), cleared by any other choice and as the title
+                                     ; opens
+WV_STARTED        EQU SHIM_WAVES+1   ; byte: the run's first step done (Waves_Start)
+WV_SECTIONS       EQU SHIM_WAVES+2   ; word: sections started in the run (tests)
+WV_MUTEKI         EQU SHIM_WAVES+4   ; byte: KAKUSI's muteki was on in the run (no best score)
+WV_FORCED         EQU SHIM_WAVES+5   ; byte: PLAYER_START at the title was the BIOS's forced start
+                                     ; (the countdown's: P1's START up, bios.asm; Title_Hook reads it)
+WV_LANES          EQU SHIM_WAVES+8   ; WAVES_LANES lanes of WVL_SIZE bytes: the original's stage
+WAVES_LANES       EQU 3              ; sections run side by side, each with its own phase and timer
+WVL_SCRIPT        EQU 0              ; word: 0 idle, 1-3 the stage script (stage 1, 2, the bonus)
+WVL_PHASE         EQU 2              ; word: its phase ($2B8A6) ...
+WVL_TIMER         EQU 4              ; word: ... and phase timer ($2B8A8), exchanged with the game's
+WVL_START         EQU 6              ; word: the section's phase (a change: the section ended)
+WVL_GAP           EQU 8              ; word: steps idle since its last section (Waves_Fill)
+WVL_WEIGHT        EQU 10             ; word: its section's weight (measured p99 sprites: Waves_Pick)
+WVL_SIZE          EQU 12
+WV_LANES_END      EQU WV_LANES+WAVES_LANES*WVL_SIZE
+WV_STATE          EQU WV_LANES_END   ; word: the cycle's part: WV_ST_CARD, WV_ST_WAVES, WV_ST_BOSS
+WV_ST_CARD        EQU 0              ; "WAVE n" (the stage card's timings), the waves tune
+WV_ST_WAVES       EQU 1              ; the waves, WAVES_CYCLE_STEPS of them
+WV_ST_BOSS        EQU 2              ; the boss: lane 0 runs a boss section to its end
+WV_ST_CLEAR       EQU 3              ; between the waves and the boss: no section, until the last
+                                     ; waves' enemies are destroyed or gone (the user, 2026-11-01)
+WV_CYCLE          EQU WV_LANES_END+2 ; word: the cycle, 1 at the run's start
+WV_CLOCK          EQU WV_LANES_END+4 ; word: steps into the card or the waves
+WV_BOSSES         EQU WV_LANES_END+6 ; word: bosses launched in the run
+WV_CARD           EQU WV_LANES_END+8 ; 10 bytes: the card's text ("WAVE n", 0)
+WV_CARD_END       EQU WV_CARD+10
+WV_BPREV          EQU WV_CARD_END    ; WV_BPREV_N x (object address.l, flag.w): each boss object
+WV_BPREV_N        EQU 3              ; seen above its base since last below it (Waves_BossHP)
+WV_BPREV_END      EQU WV_BPREV+6*WV_BPREV_N  ; (cleared as a boss section starts)
+WAVES_CYCLE_STEPS EQU 3552           ; a cycle's waves: about a minute (60 x 59.19 steps)
+WAVES_SIZE        EQU $60            ; (the run's state: the WAVES plan's Tasks 2-5)
+    if WV_BPREV_END>SHIM_WAVES+WAVES_SIZE
+    fail "shim.inc: WAVES' state past WAVES_SIZE"
+    endif
+SHIM_WAVES_END    EQU SHIM_WAVES+WAVES_SIZE
 SHIM_COOP_CLR     EQU SHIM_COOP_LIVE ; the setup clears SHIM_COOP_2P, SHIM_COOP_NEW and from here on
 COOP_SWAP_PART    EQU 1              ; SHIM_COOP_SWAP's kinds
 COOP_SWAP_ALL_BIT EQU 1
@@ -673,7 +716,8 @@ FAULT_WAIT_MASKED EQU $5741      ; "WA": a shim wait with VBlank masked by the c
 ;   $10DE80-$10DE83  player 2's bomb places' bits (SHIM_BOMB_BITS2: text.asm)
 ;   $10DE84-$10DE85  the credits the join prompt was written for (SHIM_COOP_CREDITS), P2's START
 ;                    (SHIM_COOP_P2KEY: coop.asm)
-;   $10DE86-$10DFDF  free (RES_FREE8)
+;   $10DE86-$10DEE5  WAVES' state (SHIM_WAVES .. SHIM_WAVES_END: title.asm, waves.asm)
+;   $10DEE6-$10DFDF  free (RES_FREE8)
 ;   $10DFE0-$10DFFF  the preserved block (SHIM_KEEP: not cleared at a resume)
 ; Cleared at every resume: SHIM_STATE_LO .. SHIM_STATE_HI and SHIM_HIGH_LO .. SHIM_HIGH_HI (the
 ; free ranges in them too); the stack follows at $10E000.
@@ -693,7 +737,7 @@ RES_FREE6         EQU $0010B504
 RES_FREE6_END     EQU $0010B600
 RES_FREE7         EQU $0010D7C8
 RES_FREE7_END     EQU $0010D820
-RES_FREE8         EQU $0010DE86
+RES_FREE8         EQU $0010DEE6
 RES_FREE8_END     EQU $0010DFE0
 
 ; RES_MEETS end, start: a block's (or free range's) end must be the next one's start
@@ -779,7 +823,8 @@ RES_MEETS macro
     RES_MEETS SHIM_COOP_END, SHIM_BOMB_BITS2
     RES_MEETS SHIM_BOMB_BITS2+4, SHIM_COOP_CREDITS
     RES_MEETS SHIM_COOP_CREDITS+1, SHIM_COOP_P2KEY
-    RES_MEETS SHIM_COOP_P2KEY+1, RES_FREE8
+    RES_MEETS SHIM_COOP_P2KEY+1, SHIM_WAVES
+    RES_MEETS SHIM_WAVES_END, RES_FREE8
     RES_MEETS RES_FREE8_END, SHIM_HIGH_HI
     RES_MEETS SHIM_HIGH_HI, SHIM_KEEP
     if KEEP_SUM+2>KEEP_SIZE

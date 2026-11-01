@@ -1187,6 +1187,10 @@ Coop_Setup:
     dbra    d0, .clr
     move.b  #1, SHIM_COOP_IN
     move.b  #1, SHIM_COOP_LIVE
+    tst.b   SHIM_WAVES_ON
+    beq.s   .out
+    move.b  #3, SHIM_COOP_LIVE      ; a WAVES run (one player): set up, the joins closed (no
+.out:                               ; request, no join prompt: waves.asm)
     movem.l (sp)+, d0/a0
     rts
 

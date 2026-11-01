@@ -233,7 +233,9 @@ IO_CODE = {
 # so the exit case ($2C56 -> main's $3F5C, _EXIT2) is never reached; the copyright line and
 # the version row move up from field rows 27 / 29 (fix rows 27 / 29 with the title lift: the
 # bombs' row and the screen's last 8 lines, which a CRT may crop) to rows 23 / 24 (fix rows 25 /
-# 26 at the title's view 0; row 29 then holds no text, so the lift stays off), their order kept.
+# 26 at the title's view 0; row 29 then holds no text, so the lift stays off), their order kept;
+# since the WAVES plan's two rows apart (2026-11-01) rows 25 / 26 (fix rows 27 / 28: the bombs'
+# rows, which the title does not show, inside the CRT-safe lines), under CONFIG's 23.
 # The title's code is not compared by the lock-step (it compares from the play loop's entry), but
 # the menu it returns from is: make lockstep proves it again.
 TITLE_CODE = {
@@ -243,16 +245,32 @@ TITLE_CODE = {
     0x2AD0: ("4e71",
              "title: jsr (a3) -> nop; the $33E8 call printing \"exit\" at (12, 23), the menu's 4th "
              "item (Plan 5 Task 3: the user removed it); its pushes are still popped at $2AE0"),
-    0x2AD8: ("0017",
-             "title: pea $1B.w -> pea $17.w, the copyright line's row: field (4, 23), fix row 25 "
-             "(was 27, lifted: the bombs' row), above the version, where exit was"),
-    0x2AEA: ("0018",
-             "title: pea $1D.w -> pea $18.w, the version's row: field (9, 24), fix row 26 "
+    0x2AD8: ("0019",
+             "title: pea $1B.w -> pea $19.w, the copyright line's row: field (4, 25), fix row 27 "
+             "(was 27, lifted: the bombs' row, which the title does not show), two rows under "
+             "CONFIG (23), where exit was"),
+    0x2AEA: ("001a",
+             "title: pea $1D.w -> pea $1A.w, the version's row: field (9, 26), fix row 28 "
              "(was 29: the screen's last 8 lines); no title text is left on row 29 (no lift)"),
-    0x2B80: ("0001",
-             "title: cmp.w #2,d4 -> #1 (the cursor's down limit): Down moves it only from items 0 "
-             "and 1, so it stops at CONFIG (2); item 3, exit ($2C56; main's _EXIT2 at $3F62), "
-             "is never chosen"),
+    # WAVES plan Task 1: the original's four items again (its down limit $2B80, cmp.w #2,d4, as
+    # it is: Down stops at item 3), renumbered 0 START, 1 WAVES, 2 CONTINUE, 3 CONFIG and two rows
+    # apart as the original's (field rows 17, 19, 21, 23: the user's "two rows apart" of
+    # 2026-11-01, after a "tighter menu" one row apart). The cursor's row is the original's
+    # 17 + 2 item; CONTINUE's and CONFIG's prints two rows down; WAVES is printed by the shim
+    # (title.asm Title_Draw, row 19). The dispatch table's entries for items 1-3 are START's,
+    # CONTINUE's and CONFIG's offsets: WAVES leaves as START does (its sound, the clear) and
+    # returns its item, 1, to main, which plays with the stage untouched (any item but 0 and 3:
+    # $3F3E-$3F60), as for CONTINUE (now 2); exit's entry ($2C56) is never read, so main's
+    # _EXIT2 ($3F62) is never reached.
+    0x2AAA: ("0015",
+             "title: pea $13.w -> pea $15.w, CONTINUE's row: field (12, 21), item 2 two rows under "
+             "WAVES (19)"),
+    0x2ABC: ("0017",
+             "title: pea $15.w -> pea $17.w, CONFIG's row: field (12, 23), item 3 two rows under "
+             "CONTINUE (21), where exit was"),
+    0x2BE0: ((Orig(0x2BDE, 6),),
+             "title: the choice's table, items 1-3 -> START's ($2BE6), CONTINUE's ($2BFC) and "
+             "CONFIG's ($2C2A) paths (was CONTINUE, CONFIG, exit): item 1 is WAVES"),
     # Plan 5 Task 5 (docs/notes/plan5-recon.md sections 4-5): the title's menus. KAKUSI's gate on
     # the CONFIG item ($2C2A-$2C52) tests _BITSNS group $A bit 3 (the X68000's key $53), then the
     # debug flag $221F0; only the second test goes, so the shim's _BITSNS (iocs.asm: bit 3 while
@@ -398,6 +416,11 @@ TITLE_HOOKS = {
 # P2 first joins a game) it does the replaced work alone and writes no game RAM (Coop_Over, once a
 # game, also closes the joins: the shim's own RAM; Task 6).
 GAME_HOOKS = {
+    # WAVES (the WAVES plan, src/shim/waves.asm): the stage dispatcher's switch on the stage
+    0x4A1A: (6, "Waves_Dispatch",
+             "the stage dispatcher ($4976's tail): move.w $221FA.l,d0 (the stage, switched on) -> "
+             "jsr (Waves_Dispatch).l; no run: move.w GV_STAGE,d0, rts; a run: the WAVES step, "
+             "then on to the dispatcher's epilogue ($4A58): no stage script, the stage untouched"),
     0x426A: (6, "Coop_Pass",
              "play loop: jsr $6CEC.l (the ship: its move, its death and the game over), the first "
              "of its three calls -> jsr (Coop_Pass).l; 1P: jsr $6CEC, jsr $70A0, jmp $45AE (the "
@@ -432,9 +455,9 @@ GAME_CODE = {
 # sites: digest_sites). `link.py --digests` prints them for the tables as written.
 TABLE_SHA1 = {
     "io_code": "cac933e40acb918a2d25e2fa5699353dd9dc6453",
-    "title_code": "10ff63255b6f824f1ae1efcc8efee90dff416273",
+    "title_code": "ae94fc61e3785a009cb67c989bab4c65d3dc9f88",
     "title_hook": "d435b624fc6e171b00d33614c696bee2327889ab",
-    "game_hook": "ed5f7b89760343b60f966aa12f04aa0e82acba0d",
+    "game_hook": "3af182cfa9d209721eab5a2a1d30028169272020",
     "game_code": "324becac206bbb504aa29cf28040fff3533b764f",
 }
 # Game routines the shim replaces (Plan 3 Task 3, src/shim/text.asm): name -> entry (base-0).
@@ -477,7 +500,13 @@ SHIM_VARS = {
     "SHOT_FREE": (0x22152, True, 60),      # the free-shot stack
     "SHOT_NFREE": (0x2218E, True, 2),      # its count
     "SHOTS": (0x26992, True, 0xF00),       # 30 shots x $80
-    "OBJECTS": (0x278A6, False, 0x4000),   # 128 objects x $80 (read only)
+    "OBJECTS": (0x278A6, True, 0x4000),    # 128 objects x $80 (the co-op reads them; WAVES
+                                           # raises a new boss's hit points, +$3E)
+    # WAVES (the WAVES plan, src/shim/waves.asm): a lane's phase and timer exchanged with these
+    "PHASE": (0x2B8A6, True, 4),           # the stage script's phase, then its timer
+    "BOSS": (0x22208, False),              # a boss alive ($20, the play loop counts it down)
+    "OBJ_FREE": (0x27896, False, 16),      # the object table's free bitmap (a set bit: a free slot;
+                                           # WAVES' clearing waits for every slot free)
 }
 REGS = ["d%d" % i for i in range(8)] + ["a%d" % i for i in range(7)]
 # ROM objects the game reloads from a file after the resume point (layout rule 5, "reloaded file

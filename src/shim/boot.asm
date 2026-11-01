@@ -118,6 +118,7 @@ Shim_Fault:
     include "config.asm"
     include "demo.asm"
     include "coop.asm"
+    include "waves.asm"
     include "dos.asm"
     include "iocs.asm"
     include "mcdrv.asm"
@@ -152,7 +153,8 @@ Shim_Fault:
 
 ; palettes.bin (build/gfx, make gfx) above the game's pieces (palette.asm), then the attract demo's
 ; stream (data/demo.bin, frozen: demo.asm), then the co-op's code (coop.asm: its labels fill the
-; game hooks' slots in game.asm above).
+; game hooks' slots in game.asm above), then WAVES' (waves.asm).
     PAL_DATA
     DEMO_DATA
     COOP_CODE
+    WAVES_CODE

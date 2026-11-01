@@ -168,7 +168,9 @@ PLAYER_START:
 .accept:
     move.b  #1, BIOS_START_FLAG     ; P1's alone: the BIOS takes P1's credit
     move.w  #1, SHIM_START_REQ
-    rts
+    btst    #0, REG_STATUS_B        ; P1's START up (active low): the BIOS's forced start, the
+    sne     WV_FORCED               ; countdown's (title.asm: not WAVES, whatever the cursor is on:
+    rts                             ; the WAVES plan Task 5; a press has the button down here)
 .two:
     move.l  d0, -(sp)               ; P2's START: two players, two credits where counted
     bsr     Bios_Credits

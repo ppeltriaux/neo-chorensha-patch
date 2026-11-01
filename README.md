@@ -1,8 +1,9 @@
-# Neo-Chorensha 2026-11-01 (d70c931)
+# Neo-Chorensha 2026-11-01 (5de0e05)
 
 Neo-Chorensha is Chorensha v0.10, the 1995 X68000 shooter by Famibe No Yosshin, on the Neo Geo:
 the original's own program runs on the Neo Geo's 68000, with its graphics, music and sound, two
-players at once, and the ways of a coin-op cabinet (coins and credits, the attract demo). The
+players at once, WAVES (an endless one-player mode made of the original's own enemies and
+bosses), and the ways of a coin-op cabinet (coins and credits, the attract demo). The
 project page, with videos and screenshots:
 https://continuearcade.com/neo-chorensha/
 
@@ -79,8 +80,8 @@ MiSTer.
 - the side strips' art (`art/strips/strip.png`), ours.
 
 None of the game. Where the build checks the original's instructions it checks SHA1s, and the
-31 bytes that 8 of our edits to the program share with the original are copied from
-your disk at build time; the edits' other 69 bytes are ours. The patch's data holds no 3 bytes
+37 bytes that 9 of our edits to the program share with the original are copied from
+your disk at build time; the edits' other 71 bytes are ours. The patch's data holds no 3 bytes
 in a row of the original program, and its files quote none of the game's text.
 
 ## Legal

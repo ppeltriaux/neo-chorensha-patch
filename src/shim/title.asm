@@ -5,16 +5,21 @@
 ; ($2B10-$2BB8), after the pass's V-blank wait ($1F92) and its stick and trigger reads, before the
 ; loop acts on them. The hook may change the loop's registers:
 ;   d3 / d6  the stick's last and new values (a press edge: d3 0, d6 not), d4 the cursor's item
-;            (0 START, 1 CONTINUE, 2 CONFIG, or AUTO FIRE where credits are counted), d5 / d7 the
-;            triggers' last and new values (the loop chooses item d4 on a press edge: d5 0, d7 not).
+;            (0 START, 1 WAVES, 2 CONTINUE, 3 CONFIG, or AUTO FIRE where credits are counted: the
+;            WAVES plan's four items two rows apart, field rows 17-23, link.py TITLE_CODE), d5 / d7
+;            the triggers' last and new values (the loop chooses item d4 on a press edge: d5 0, d7
+;            not). WAVES (a run of the endless mode: waves.asm) leaves as START does and returns 1
+;            to main, which plays with the stage untouched; SHIM_WAVES_ON tells the run it is one:
+;            set as the title leaves on WAVES, cleared as it leaves on anything else and as it
+;            opens.
 ; Credits are counted on the MVS without Free Play (Bios_Credits); there:
-;   * no credit: no menu at all. INSERT COIN blinks between START's and CONTINUE's rows; START,
-;     CONTINUE and item 2 are printed empty and the cursor drawn as a blank cell (the drawing's
+;   * no credit: no menu at all. INSERT COIN blinks between START's and WAVES' rows; START,
+;     WAVES, CONTINUE and item 3 are printed empty and the cursor drawn as a blank cell (the drawing's
 ;     sites, Title_Draw), and the loop sees no stick edge and no trigger edge (d3 = d5 = 1 every
 ;     pass): A, B and the stick choose nothing, move nothing (no CONFIG, no KAKUSI, no toggle);
-;   * credits: START, CONTINUE and, on item 2's row (CONFIG's place), AUTO FIRE OFF / ON (the
+;   * credits: START, CONTINUE and, on item 3's row (CONFIG's place), AUTO FIRE OFF / ON (the
 ;     preserved block's KEEP_AUTOFIRE, as config.asm's item shows it), the cursor to START when the
-;     first credit comes. A trigger press edge on item 2 toggles AUTO FIRE (the block's byte,
+;     first credit comes. A trigger press edge on item 3 toggles AUTO FIRE (the block's byte,
 ;     sealed again: resume.asm Keep_Seal) and redraws it, and chooses nothing (d5 = 1: the loop
 ;     sees no edge; d7 kept, so a trigger held on is no edge in the next pass either: one toggle a
 ;     press); CONFIG and KAKUSI are not reached there (the user's request, 2026-10-28: on the MVS
@@ -68,27 +73,36 @@
 ; player's, and after DEMO_TITLE_PASSES passes it chooses START itself (Demo_Title). The rest (the
 ; countdown, the START button, the choices, the idle return) is the title mode's.
 ; All text goes through the text model (Text_Put), on the title's fixed view: field (x, y) on fix
-; (x + 4, y + 2), inside the CRT-safe area (fix rows 19-26, columns 15-35: not the strips, not the
-; bombs' rows 27-28, not the HUD's rows 3-4).
+; (x + 4, y + 2), inside the CRT-safe area (fix rows 19-28, columns 15-35: not the strips, not the
+; HUD's rows 3-4; the bombs' rows 27-28 since the WAVES plan's two rows apart, the title showing no
+; bombs).
 ; ==============================================================================
 TITLE_CURSOR    EQU 5               ; the cursor's character ($2AF2: $1618(11, 17 + 2 d4, 5))
 TITLE_CUR_X     EQU 11
-TITLE_MENU_X    EQU 12              ; the items' column, their rows 17 + 2 n
-TITLE_MENU_Y    EQU 17
-TITLE_CONFIG    EQU 2               ; CONFIG's item (AUTO FIRE's where credits are counted)
+TITLE_MENU_X    EQU 12              ; the items' column, their rows 17 + 2 n (the original's, two
+TITLE_MENU_Y    EQU 17              ; rows apart: the user's, 2026-11-01)
+TITLE_MENU_DY   EQU 2
+    if TITLE_MENU_DY!=2
+    fail "title.asm: Title_Menu doubles the item for its row (the original's cursor rows)"
+    endif
+TITLE_WAVES     EQU 1               ; WAVES' item (printed by the hook: Title_Draw, Title_Menu)
+TITLE_CONT      EQU 2               ; CONTINUE's item
+TITLE_CONFIG    EQU 3               ; CONFIG's item (AUTO FIRE's where credits are counted)
 TITLE_KWAIT_PASSES EQU 4            ; the KAKUSI code's window: passes CONFIG's choice is held back
                                     ; (C+D held, one of A and B down) for the other (67.6 ms)
-TITLE_COIN_X    EQU 12              ; INSERT COIN: between START's and CONTINUE's rows
+TITLE_COIN_X    EQU 12              ; INSERT COIN: between START's and WAVES' rows
 TITLE_COIN_Y    EQU 18
 TITLE_BLINK     EQU 5               ; on and off for 2^5 = 32 passes each
 TITLE_COUNTDOWN EQU $303B           ; 30 s (BCD seconds, frames): the countdown when the BIOS's
                                     ; setting word reads 0
 TITLE_TIME_X    EQU 25              ; "TIME nn": right of START, to field column 31 (fix 35)
 TITLE_TIME_Y    EQU 17
-TITLE_CREDIT_X  EQU 23              ; "CREDIT nn": right of the version row (field 9-21, row 24)
-TITLE_CREDIT_Y  EQU 24
-    if (TITLE_TIME_X+7>32)||(TITLE_CREDIT_X+9>32)||(TITLE_CREDIT_Y+2>26)||(TITLE_MENU_X+13>32)
-    fail "title.asm: the cabinet's text must stay in field columns 0-31, fix rows up to 26"
+TITLE_CREDIT_X  EQU 23              ; "CREDIT nn": right of the version row (field 9-21, row 26)
+TITLE_CREDIT_Y  EQU 26
+TITLE_BEST_X    EQU 18              ; "BEST 0x" and 7 digits: right of WAVES (field 12-16)
+TITLE_BEST_Y    EQU TITLE_MENU_Y+TITLE_MENU_DY*TITLE_WAVES
+    if (TITLE_TIME_X+7>32)||(TITLE_CREDIT_X+9>32)||(TITLE_CREDIT_Y+2>28)||(TITLE_MENU_X+13>32)||(TITLE_BEST_X+14>32)
+    fail "title.asm: the cabinet's text must stay in field columns 0-31, fix rows up to 28"
     endif
 GAME_STR_START  EQU GAME_ROM+$29D0  ; the title's own strings ("START", "CONTINUE")
 GAME_STR_CONT   EQU GAME_ROM+$29D6
@@ -132,6 +146,11 @@ Title_Hook:
     move.w  d1, BIOS_COMPULSION_TIMER
 .open:
     move.w  #TITLE_LOOP, SHIM_TITLE_STATE
+    tst.b   SHIM_WAVES_ON
+    beq.s   .noend
+    jsr     Waves_End               ; a run ended: its game over shows the title (waves.asm), its
+    bsr     Title_Best              ; score the best perhaps: the line drawn again
+.noend:
     tst.w   d0
     bne.s   .menu
     bsr     Title_NoCoin            ; no credit: INSERT COIN, no menu, no edge
@@ -172,7 +191,7 @@ Title_Hook:
     moveq   #1, d3                  ; CONFIG's choice held back last pass (the KAKUSI code's window,
     moveq   #0, d5                  ; .config): judged again in this one (no stick edge, a trigger
     moveq   #1, d7                  ; edge), whatever the triggers are now (let go: CONFIG)
-    bra.s   .config
+    bra     .config
 .kdrop:
     clr.w   SHIM_TITLE_KWAIT        ; (the cursor left CONFIG: a guard. Nothing moves it in the
                                     ; window: its passes kill the stick edge, and it opens only
@@ -183,7 +202,7 @@ Title_Hook:
     tst.w   d7
     beq     .stay
     move.w  a1, d0
-    cmpi.w  #TITLE_CONFIG, d4       ; a choice: item 2 (CONFIG, or AUTO FIRE), or START / CONTINUE
+    cmpi.w  #TITLE_CONFIG, d4       ; a choice: item 3 (CONFIG, or AUTO FIRE), or START / CONTINUE
     bne.s   .item
     tst.w   d0
     bmi.s   .config                 ; no credit counted: CONFIG
@@ -200,11 +219,27 @@ Title_Hook:
     cmpi.w  #2, SHIM_START_REQ      ; START: a new game, whatever the cursor is on; P2's START
     seq     SHIM_COOP_START2        ; (PLAYER_START: 2) a two-player one (coop.asm Coop_Starts
     clr.w   SHIM_START_REQ          ; joins P2 at its first step)
+    cmpi.w  #TITLE_WAVES, d4        ; P1's START on WAVES: a run (the WAVES plan Task 5), but the
+    bne.s   .tostart                ; BIOS's forced start (the countdown, where credits are counted:
+    tst.b   SHIM_COOP_START2        ; PLAYER_START's WV_FORCED, START up) is a normal game
+    bne.s   .tostart
+    tst.b   WV_FORCED
+    beq.s   .chose
+    move.w  a1, d0
+    bmi.s   .chose                  ; (no credit counted: no countdown)
+.tostart:
     moveq   #0, d4
+.chose:
+    clr.b   WV_FORCED
     moveq   #1, d3                  ; (no stick edge)
     moveq   #0, d5
     moveq   #1, d7                  ; the loop chooses START
 .game:
+    clr.b   SHIM_WAVES_ON           ; WAVES (item 1, A on it): a run; START, CONTINUE: none
+    cmpi.w  #TITLE_WAVES, d4
+    bne.s   .nowaves
+    jsr     Waves_Begin             ; (waves.asm: its state cleared, the run on)
+.nowaves:
     move.w  #TITLE_FRESH, SHIM_TITLE_STATE  ; after the game, the title opens again
     move.b  #PLAYER_MOD_PLAYING, BIOS_PLAYER_MOD1   ; P1 plays (the BIOS's convention: its play
     bra.s   .leave                  ; time's count, $C12BF8; final review M3)
@@ -274,7 +309,7 @@ Title_Hook:
 ; Title_Draw (Title_Hook from the title's drawing, $2A82-$2B0A: the title's opening and its redraw
 ; back from CONFIG): the replaced `pea $C.w` / `pea $5.w` pushed. Where credits are counted,
 ; CONFIG's print gets AUTO FIRE's string for the block's byte instead (the one pushed before the
-; x); with no credit in (Bios_Credits 0), the START, CONTINUE and item 2 prints get an empty one
+; x); with no credit in (Bios_Credits 0), the START, WAVES, CONTINUE and item 3 prints get an empty one
 ; and the cursor's character is 0 (Text8's blank cell). So the menu and the cursor are never on
 ; the screen at 0 credits, not even before the loop's first pass; and SHIM_TITLE_COIN is set, so
 ; a credit counted before that pass brings the menu (Title_Menu: fix round 1, I1). Every register
@@ -307,6 +342,7 @@ Title_Draw:
     bra.s   .out
 .cursor:
     move.l  #TITLE_CURSOR, 8(sp)    ; pea $5.w: the cursor's character
+    bsr     Title_Waves             ; WAVES' text (the title's print has none), or blanks
     tst.w   d0
     bne.s   .out
     clr.l   8(sp)                   ; no credit: a blank cell, no cursor
@@ -315,8 +351,62 @@ Title_Draw:
     move.l  (sp)+, d0
     rts
 
+; Title_Waves (Title_Draw, d0 Bios_Credits' answer): WAVES on its row (item 1, field (12, 19)),
+; or its cells blank with no credit in (the menu is not drawn then: INSERT COIN's row). Every
+; register kept.
+Title_Waves:
+    movem.l d0-d2/a0, -(sp)
+    lea     TITLE_STR_WAVES, a0
+    tst.w   d0
+    beq.s   .wipe
+    moveq   #TITLE_MENU_X, d0
+    moveq   #TITLE_MENU_Y+TITLE_MENU_DY*TITLE_WAVES, d1
+    bsr     Title_Puts
+    bra.s   .out
+.wipe:
+    moveq   #TITLE_MENU_X, d0
+    moveq   #TITLE_MENU_Y+TITLE_MENU_DY*TITLE_WAVES, d1
+    bsr     Title_Wipe
+.out:
+    movem.l (sp)+, d0-d2/a0
+    bra     Title_Best
+
+; Title_Best: the best WAVES score since power-on (SHIM_KEEP+KEEP_WAVES_BEST: waves.asm Waves_End)
+; as "BEST 0x" and 7 hex digits (the HUD's way) beside WAVES (field (18, 19)), in the title mode
+; (not the demo's title) once there is one. Every register kept.
+Title_Best:
+    cmpi.w  #USER_REQ_TITLE, SHIM_BIOS_MODE
+    bne.s   .none
+    tst.l   SHIM_KEEP+KEEP_WAVES_BEST
+    beq.s   .none
+    movem.l d0-d3/a0, -(sp)
+    lea     TITLE_STR_BEST, a0
+    moveq   #TITLE_BEST_X, d0
+    moveq   #TITLE_BEST_Y, d1
+    bsr     Title_Puts
+    move.l  SHIM_KEEP+KEEP_WAVES_BEST, d3
+    rol.l   #4, d3                  ; (7 digits: the top nibble passed over)
+    moveq   #7-1, d2
+.digit:
+    rol.l   #4, d3
+    move.w  d2, -(sp)
+    move.w  d3, d2
+    andi.w  #$F, d2
+    addi.w  #'0', d2
+    cmpi.w  #'9', d2
+    bls.s   .put
+    addq.w  #'A'-'9'-1, d2
+.put:
+    bsr     Text_Put
+    addq.w  #1, d0
+    move.w  (sp)+, d2
+    dbra    d2, .digit
+    movem.l (sp)+, d0-d3/a0
+.none:
+    rts
+
 ; Title_NoCoin: INSERT COIN blinking on its row; no stick edge (d3) and no trigger edge (d5): with
-; no credit in, nothing is chosen or moved. START, CONTINUE and item 2 were printed empty and the
+; no credit in, nothing is chosen or moved. START, WAVES, CONTINUE and item 3 were printed empty and the
 ; cursor blank (the drawing's sites: Title_Draw). Uses d0-d2/a0.
 Title_NoCoin:
     move.w  #1, SHIM_TITLE_COIN
@@ -329,8 +419,9 @@ Title_NoCoin:
     beq     Title_Puts              ; on
     bra     Title_Wipe              ; off
 
-; Title_Menu: the first credit in: START, CONTINUE and AUTO FIRE drawn, INSERT COIN off, the
-; cursor drawn on START (as the title opens; its cell on item d4's row, blank till now, cleared).
+; Title_Menu: the first credit in: START, WAVES, CONTINUE and AUTO FIRE drawn, INSERT COIN off,
+; the cursor drawn on START (as the title opens; its cell on item d4's row, blank till now,
+; cleared).
 ; Uses d0-d2/a0.
 Title_Menu:
     clr.w   SHIM_TITLE_COIN
@@ -342,14 +433,18 @@ Title_Menu:
     moveq   #TITLE_MENU_X, d0
     moveq   #TITLE_MENU_Y, d1
     bsr     Title_Puts
+    lea     TITLE_STR_WAVES, a0
+    moveq   #TITLE_MENU_X, d0
+    moveq   #TITLE_MENU_Y+TITLE_MENU_DY*TITLE_WAVES, d1
+    bsr     Title_Puts
     lea     GAME_STR_CONT, a0
     moveq   #TITLE_MENU_X, d0
-    moveq   #TITLE_MENU_Y+2, d1
+    moveq   #TITLE_MENU_Y+TITLE_MENU_DY*TITLE_CONT, d1
     bsr     Title_Puts
     bsr     Title_AutoFire
     moveq   #TITLE_CUR_X, d0
     move.w  d4, d1
-    add.w   d1, d1
+    add.w   d1, d1                  ; (TITLE_MENU_DY 2)
     addi.w  #TITLE_MENU_Y, d1
     moveq   #0, d2
     bsr     Text_Put
@@ -358,7 +453,7 @@ Title_Menu:
     moveq   #TITLE_CURSOR, d2
     bra     Text_Put
 
-; Title_AutoFire: item 2's text where credits are counted, AUTO FIRE OFF / ON as the preserved
+; Title_AutoFire: item 3's text where credits are counted, AUTO FIRE OFF / ON as the preserved
 ; block's byte is. Uses d0-d2/a0.
 Title_AutoFire:
     lea     TITLE_STR_AF_OFF, a0
@@ -367,7 +462,7 @@ Title_AutoFire:
     lea     TITLE_STR_AF_ON, a0
 .put:
     moveq   #TITLE_MENU_X, d0
-    moveq   #TITLE_MENU_Y+2*TITLE_CONFIG, d1
+    moveq   #TITLE_MENU_Y+TITLE_MENU_DY*TITLE_CONFIG, d1
     bra     Title_Puts
 
 ; Title_Counts: d0 = Bios_Credits' answer (kept). Counted: CREDIT nn; with credits, TIME nn (the
@@ -483,6 +578,10 @@ TITLE_STR_TIME:
     dc.b    "TIME ", 0
 TITLE_STR_EMPTY:
     dc.b    0
+TITLE_STR_WAVES:
+    dc.b    "WAVES", 0
+TITLE_STR_BEST:
+    dc.b    "BEST 0x", 0
 TITLE_STR_AF_OFF:                   ; (the same length: ON's redraw covers OFF's last cell)
     dc.b    "AUTO FIRE OFF", 0
 TITLE_STR_AF_ON:
