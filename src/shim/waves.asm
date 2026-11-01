@@ -18,10 +18,10 @@ WV_BOSS_T0      EQU $1B0            ; a boss lane's first timer: the boss tune a
                                     ; $240 (the section's own timings; its warning at $40 skipped)
 WV_BOSS_AT      EQU $241            ; the lane's timer after the step that made the boss
 WV_HP_MAX       EQU $7FFF           ; hit points are a signed word ($1129E)
-WV_GAP0         EQU 120             ; the ramp (Waves_Fill): an idle lane's wait before its next
-WV_GAP_STEP     EQU 16              ; section, WV_GAP0 less WV_GAP_STEP a cycle, at least
-WV_GAP_MIN      EQU 16              ; WV_GAP_MIN; lanes allowed 1 + (cycle - 1) / 2, at most
-                                    ; WAVES_LANES
+WR_POOL         EQU 0               ; WAVES_RAMP's rows: the pool's first sections drawn from,
+WR_LANES        EQU 2               ; the lanes allowed, an idle lane's gap (Waves_Fill, Waves_Pick)
+WR_GAP          EQU 4
+WR_SIZE         EQU 6
 WV_BUDGET       EQU 360             ; the sprite ceiling's governor (Waves_Pick): the running
                                     ; sections' weights (their measured p99 requested sprites,
                                     ; WAVES_POOL) with the new one's at most this (tuned against
@@ -57,8 +57,9 @@ Waves_Dispatch:
 ;     idle: a section's tail is not waited for);
 ;   * the clearing: no section, until the last waves' enemies are destroyed or gone (the object
 ;     table empty: the user's request, 2026-11-01), at most WV_CLEAR_MAX steps; then lane 0 is
-;     given the next boss's section from WV_BOSS_T0 (odd bosses stage 1's, $160, even ones stage
-;     2's, $190);
+;     given the next boss's section from WV_BOSS_T0, in turn stage 1's ($160), stage 2's ($190)
+;     and the bonus stage's finale ($160: stage 2's boss, stage 1's joining at $500; the section
+;     ends once both are down) (WAVES_BOSSES; the user, 2026-11-02);
 ;   * the boss: lane 0 alone; the step that made the boss raises its hit points (Waves_BossHP);
 ;     the section's own end (its boss dead: it writes phase $200, which never runs) starts the
 ;     next cycle's card.
@@ -146,14 +147,14 @@ Waves_Step:
 .bprev:
     clr.w   (a0)+
     dbra    d0, .bprev
-    moveq   #1, d0                  ; odd: stage 1's boss section
-    move.w  #$160, d1
-    btst    #0, WV_BOSSES+1
-    bne.s   .which
-    moveq   #2, d0                  ; even: stage 2's
-    move.w  #$190, d1
-.which:
-    move.w  d0, WVL_SCRIPT(a2)
+    moveq   #0, d0                  ; the boss's section in turn (WAVES_BOSSES): bosses mod 3
+    move.w  WV_BOSSES, d0
+    divu    #3, d0
+    swap    d0
+    lsl.w   #2, d0
+    lea     WAVES_BOSSES(pc), a0
+    move.w  (a0,d0.w), WVL_SCRIPT(a2)
+    move.w  2(a0,d0.w), d1
     move.w  d1, WVL_PHASE(a2)
     move.w  d1, WVL_START(a2)
     move.w  #WV_BOSS_T0, WVL_TIMER(a2)
@@ -307,27 +308,14 @@ Waves_CardText:
     clr.b   (a0)
     rts
 
-; Waves_Fill (a2 = WV_LANES; the waves): the ramp. Lanes 0 .. allowed - 1 (allowed = 1 + (cycle
-; - 1) / 2, at most WAVES_LANES) that are idle wait the cycle's gap (WV_GAP0 less WV_GAP_STEP a
-; cycle, at least WV_GAP_MIN), then take a section that fits the budget (Waves_Pick; none: the
-; lane waits on). a2 kept; d0-d4/a0-a1 used.
+; Waves_Fill (a2 = WV_LANES; the waves): the ramp (WAVES_RAMP, the cycle's row: Waves_Row). Its
+; first lanes that are idle wait the row's gap, then take a section that fits the budget
+; (Waves_Pick; none: the lane waits on). a2 kept; d0-d4/a0-a1 used.
 Waves_Fill:
-    move.w  WV_CYCLE, d3
-    subq.w  #1, d3                  ; cycle - 1
-    move.w  d3, d4
-    lsr.w   #1, d4                  ; allowed - 1
-    cmpi.w  #WAVES_LANES-1, d4
-    bls.s   .lanes
-    moveq   #WAVES_LANES-1, d4
-.lanes:
-    mulu    #WV_GAP_STEP, d3
-    move.w  #WV_GAP0, d0
-    sub.w   d3, d0
-    cmpi.w  #WV_GAP_MIN, d0
-    bge.s   .gap
-    moveq   #WV_GAP_MIN, d0
-.gap:
-    move.w  d0, d3                  ; the gap
+    bsr     Waves_Row
+    move.w  WR_LANES(a0), d4
+    subq.w  #1, d4                  ; lanes - 1
+    move.w  WR_GAP(a0), d3          ; the gap
     movea.l a2, a1
 .lane:
     tst.w   WVL_SCRIPT(a1)
@@ -349,10 +337,27 @@ Waves_Fill:
     dbra    d4, .lane
     rts
 
+; Waves_Row: a0 = the cycle's row of WAVES_RAMP (its last row from then on). d0/a0 used.
+Waves_Row:
+    move.w  WV_CYCLE, d0
+    bne.s   .c
+    moveq   #1, d0                  ; (cycle 0: never in a run; the first row)
+.c:
+    cmpi.w  #WAVES_RAMP_N, d0
+    bls.s   .in
+    moveq   #WAVES_RAMP_N, d0
+.in:
+    subq.w  #1, d0
+    mulu    #WR_SIZE, d0
+    lea     WAVES_RAMP(pc), a0
+    adda.w  d0, a0
+    rts
+
 ; Waves_Pick (a2 = an idle lane): a section drawn with the game's own random numbers ($4ABE) from
-; WAVES_POOL's first WAVES_POOL1 (stage 1's and the bonus stage's) in cycle 1, from all of it
-; after: the draw, or the next after it, that no other lane runs and whose weight with the
-; running sections' keeps within WV_BUDGET; none: the lane stays idle. d0-d5/a0-a1 used.
+; WAVES_POOL's first WR_POOL of the cycle's row (stage 1's, then stage 2's too, then the bonus
+; stage's too: the original's order of difficulty): the draw, or the next after it, that no other
+; lane runs and whose weight with the running sections' keeps within WV_BUDGET; none: the lane
+; stays idle. d0-d5/a0-a1 used.
 Waves_Pick:
     lea     WV_LANES, a1            ; the running sections' weight
     moveq   #0, d5
@@ -364,11 +369,8 @@ Waves_Pick:
 .s1:
     lea     WVL_SIZE(a1), a1
     dbra    d2, .sum
-    moveq   #WAVES_POOL1, d3
-    cmpi.w  #1, WV_CYCLE
-    beq.s   .n
-    moveq   #WAVES_POOL_N, d3
-.n:
+    bsr.s   Waves_Row
+    move.w  WR_POOL(a0), d3
     jsr     (GAME_ROM+$4ABE).l      ; (C: d0-d1/a0-a1 its own)
     andi.l  #$FF, d0
     divu    d3, d0
@@ -479,13 +481,31 @@ WAVES_BLANK:                        ; (the card's cells: "WAVE " and up to 3 dig
 WAVES_SCRIPTS:                      ; WVL_SCRIPT 1-3
     dc.l    GAME_ROM+$78C2, GAME_ROM+$8152, GAME_ROM+$8E2C
 WAVES_POOL:                         ; (script, phase, weight: its p99 requested sprites run alone,
-                                    ; docs/notes/waves.md "Measures")
+                                    ; docs/notes/waves.md "Measures"), easiest stage first
     dc.w    1, $108, 106, 1, $110, 178, 1, $120, 107, 1, $130, 88, 1, $140, 131, 1, $150, 196
-    dc.w    3, $108, 190, 3, $110, 224, 3, $120, 207, 3, $130, 88, 3, $140, 259, 3, $150, 359
-WAVES_POOL1     EQU (*-WAVES_POOL)/6    ; stage 1's and the bonus stage's: from cycle 1
+WAVES_POOL1     EQU (*-WAVES_POOL)/6    ; stage 1's
     dc.w    2, $110, 166, 2, $128, 193, 2, $130, 250, 2, $140, 227, 2, $150, 100, 2, $160, 232
     dc.w    2, $170, 94, 2, $180, 197
-WAVES_POOL_N    EQU (*-WAVES_POOL)/6    ; stage 2's too (not its $120: it launches nothing)
+WAVES_POOL2     EQU (*-WAVES_POOL)/6    ; stage 2's too (not its $120: it launches nothing)
+    dc.w    3, $108, 190, 3, $110, 224, 3, $120, 207, 3, $130, 88, 3, $140, 259, 3, $150, 359
+WAVES_POOL_N    EQU (*-WAVES_POOL)/6    ; the bonus stage's too (the original's busiest)
+WAVES_RAMP:                         ; per cycle (the last row from then on: Waves_Row): the pool's
+                                    ; first sections drawn from, the lanes (at most WAVES_LANES),
+                                    ; an idle lane's wait before its next section (steps) -- the
+                                    ; user's 2026-11-02 play-test: wave 1 too hard
+    dc.w    WAVES_POOL1, 1, 150     ; 1: stage 1's sections, one at a time (a stage 1's density)
+    dc.w    WAVES_POOL2, 1, 135     ; 2: stage 2's join
+    dc.w    WAVES_POOL_N, 1, 120    ; 3: the bonus stage's join
+    dc.w    WAVES_POOL_N, 2, 96     ; 4-5: two lanes
+    dc.w    WAVES_POOL_N, 2, 72
+    dc.w    WAVES_POOL_N, 3, 48     ; 6 on: three lanes, the gap down to 16
+    dc.w    WAVES_POOL_N, 3, 32
+    dc.w    WAVES_POOL_N, 3, 16
+WAVES_RAMP_N    EQU (*-WAVES_RAMP)/WR_SIZE
+WAVES_BOSSES:                       ; (script, phase) by bosses launched mod 3
+    dc.w    3, $160                 ; 3rd, 6th, ...: the bonus stage's finale (both bosses)
+    dc.w    1, $160                 ; 1st, 4th, ...: stage 1's
+    dc.w    2, $190                 ; 2nd, 5th, ...: stage 2's
 
 WAVES_IMAGE_END:
     if WAVES_IMAGE_END>$100000

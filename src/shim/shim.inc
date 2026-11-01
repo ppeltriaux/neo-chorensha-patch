@@ -571,7 +571,8 @@ WV_LANES_END      EQU WV_LANES+WAVES_LANES*WVL_SIZE
 WV_STATE          EQU WV_LANES_END   ; word: the cycle's part: WV_ST_CARD, WV_ST_WAVES, WV_ST_BOSS
 WV_ST_CARD        EQU 0              ; "WAVE n" (the stage card's timings), the waves tune
 WV_ST_WAVES       EQU 1              ; the waves, WAVES_CYCLE_STEPS of them
-WV_ST_BOSS        EQU 2              ; the boss: lane 0 runs a boss section to its end
+WV_ST_BOSS        EQU 2              ; the boss: lane 0 runs a boss section to its end (in turn
+                                     ; stage 1's, stage 2's, the bonus stage's finale: WAVES_BOSSES)
 WV_ST_CLEAR       EQU 3              ; between the waves and the boss: no section, until the last
                                      ; waves' enemies are destroyed or gone (the user, 2026-11-01)
 WV_CYCLE          EQU WV_LANES_END+2 ; word: the cycle, 1 at the run's start
@@ -580,7 +581,8 @@ WV_BOSSES         EQU WV_LANES_END+6 ; word: bosses launched in the run
 WV_CARD           EQU WV_LANES_END+8 ; 10 bytes: the card's text ("WAVE n", 0)
 WV_CARD_END       EQU WV_CARD+10
 WV_BPREV          EQU WV_CARD_END    ; WV_BPREV_N x (object address.l, flag.w): each boss object
-WV_BPREV_N        EQU 3              ; seen above its base since last below it (Waves_BossHP)
+WV_BPREV_N        EQU 4              ; seen above its base since last below it (Waves_BossHP; the
+                                     ; bonus stage's finale: $FF42's one and $F7C0's two, one spare)
 WV_BPREV_END      EQU WV_BPREV+6*WV_BPREV_N  ; (cleared as a boss section starts)
 WAVES_CYCLE_STEPS EQU 3552           ; a cycle's waves: about a minute (60 x 59.19 steps)
 WAVES_SIZE        EQU $60            ; (the run's state: the WAVES plan's Tasks 2-5)
